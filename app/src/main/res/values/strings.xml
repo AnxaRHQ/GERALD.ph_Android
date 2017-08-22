@@ -1,3 +1,5 @@
 <resources>
     <string name="app_name">GERALD.ph</string>
+
+    <string name="ALERTMESSAGE_OFFLINE">Your internet connection appears to be offline.</string>
 </resources>
