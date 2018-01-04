@@ -7,33 +7,37 @@ import android.content.DialogInterface;
 import android.graphics.Bitmap;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
+import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.text.TextUtils;
 import android.view.View;
 import android.view.Window;
 import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
-import android.widget.Button;
 import android.widget.ImageButton;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 
-import java.util.Timer;
+import io.fabric.sdk.android.Fabric;
+import com.crashlytics.android.Crashlytics;
+
 
 
 public class MainActivity extends AppCompatActivity {
 
     public WebView mainContentWebView;
-    private static final int ERROR_ACTIVITY = 111;
     private LinearLayout mlLayoutRequestError = null;
 
     String URLPath = "";
     public String contentString = "";
     Boolean isConnected = false;
+
+    final String appShortName = "GeraldPH";
 
 
     ProgressBar myProgressBar;
@@ -41,6 +45,8 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        Fabric.with(this, new Crashlytics());
+
         super.onCreate(savedInstanceState);
 
         URLPath = "http://shop.gerald.ph/";
@@ -56,14 +62,18 @@ public class MainActivity extends AppCompatActivity {
         forwardBrowserButton = (ImageButton) findViewById(R.id.forward);
         forwardBrowserButton.setOnClickListener(new View.OnClickListener() {
             public void onClick(View view) {
-                mainContentWebView.goForward();
+                mlLayoutRequestError.setVisibility(View.VISIBLE);
+                if (checkConnection())
+                    mainContentWebView.goForward();
             }
 
         });
         backBrowserButton = (ImageButton) findViewById(R.id.back);
         backBrowserButton.setOnClickListener(new View.OnClickListener() {
             public void onClick(View view) {
-                mainContentWebView.goBack();
+                mlLayoutRequestError.setVisibility(View.VISIBLE);
+                if (checkConnection())
+                    mainContentWebView.goBack();
             }
         });
         refreshBrowserButton = (ImageButton) findViewById(R.id.refresh);
@@ -89,6 +99,14 @@ public class MainActivity extends AppCompatActivity {
             isConnected = true;
         }
 
+        //custom user agent
+        String defaultagent = mainContentWebView.getSettings().getUserAgentString();
+        if (defaultagent == null)
+            defaultagent = getDefaultUserAgent();
+        mainContentWebView.getSettings().setUserAgentString(appShortName + "/" + BuildConfig.VERSION_NAME + " " + getDeviceName() +  " Mobile " + defaultagent);
+        System.out.println(appShortName + "/" + BuildConfig.VERSION_NAME + " " + getDeviceName() +  " Mobile " + defaultagent);
+
+
     }
 
 
@@ -96,9 +114,12 @@ public class MainActivity extends AppCompatActivity {
 
         myProgressBar.setVisibility(View.INVISIBLE);
 
+
         if (Utility.isNetworkAvailable(this)){
             System.out.println("OK!");
             isConnected = true;
+
+            mlLayoutRequestError.setVisibility(View.INVISIBLE);
         }
         else {
             isConnected = false;
@@ -194,7 +215,6 @@ public class MainActivity extends AppCompatActivity {
             super.onPageFinished(view, url);
             if (myProgressBar != null)
                 myProgressBar.setVisibility(View.INVISIBLE);
-
         }
 
         @Override
@@ -219,6 +239,64 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    /* Custom userAget */
+    private static String getDefaultUserAgent(){
+        StringBuilder result = new StringBuilder(64);
+        result.append("Dalvik/");
+        result.append(System.getProperty("java.vm.version")); // such as 1.1.0
+        result.append(" (Linux; U; Android ");
+
+        String version = Build.VERSION.RELEASE; // "1.0" or "3.4b5"
+        result.append(version.length() > 0 ? version : "1.0");
+
+        // add the model for the release build
+        if ("REL".equals(Build.VERSION.CODENAME)) {
+            String model = Build.MODEL;
+            if (model.length() > 0) {
+                result.append("; ");
+                result.append(model);
+            }
+        }
+        String id = Build.ID; // "MASTER" or "M4-rc20"
+        if (id.length() > 0) {
+            result.append(" Build/");
+            result.append(id);
+        }
+        result.append(")");
+        return result.toString();
+    }
+
+    /** Returns the consumer friendly device name */
+    public static String getDeviceName() {
+        String manufacturer = Build.MANUFACTURER;
+        String model = Build.MODEL;
+        if (model.startsWith(manufacturer)) {
+            return capitalize(model);
+        }
+        return capitalize(manufacturer) + "/" + model;
+    }
+
+    private static String capitalize(String str) {
+        if (TextUtils.isEmpty(str)) {
+            return str;
+        }
+        char[] arr = str.toCharArray();
+        boolean capitalizeNext = true;
+
+        StringBuilder phrase = new StringBuilder();
+        for (char c : arr) {
+            if (capitalizeNext && Character.isLetter(c)) {
+                phrase.append(Character.toUpperCase(c));
+                capitalizeNext = false;
+                continue;
+            } else if (Character.isWhitespace(c)) {
+                capitalizeNext = true;
+            }
+            phrase.append(c);
+        }
+
+        return phrase.toString();
+    }
 
 
 
